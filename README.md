@@ -4,7 +4,7 @@ A modern, responsive, and highly dynamic To-Do list application built with Djang
 
 This project evolved from a traditional Server-Side Rendered (SSR) application into a robust API-driven application featuring a stunning Glassmorphism UI, asynchronous Javascript data-fetching, custom authentication, and automated PDF exports.
 
-## ✨ Features
+## Features
 
 - **Modern Glassmorphism UI**: Beautiful, fully responsive dark-mode interface with vibrant gradients, custom typography, and micro-animations.
 - **RESTful API Architecture**: Uses Django REST Framework and Javascript `fetch()` for seamless, asynchronous task management (Add, toggle, delete tasks without page reloads!).
@@ -50,7 +50,6 @@ This project evolved from a traditional Server-Side Rendered (SSR) application i
    ```bash
    python manage.py runserver
    ```
-   *Visit `http://127.0.0.1:8000/` in your browser to view the application.*
 
 ---
 *Built as a showcase for integrating modern frontend aesthetics with powerful Django backend architectures.*

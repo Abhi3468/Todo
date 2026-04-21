@@ -116,6 +116,7 @@ uuid_utils==0.14.0
 virtualenv==20.26.1
 virtualenvwrapper-win==1.2.7
 watchdog==6.0.0
+whitenoise==6.12.0
 xxhash==3.6.0
 yarl==1.22.0
 zstandard==0.25.0

@@ -15,7 +15,7 @@ click==8.3.1
 colorama==0.4.6
 dataclasses-json==0.6.7
 distlib==0.3.8
-Django==5.0.6
+Django==4.2.7
 djangorestframework==3.17.1
 faiss-cpu==1.13.2
 filelock==3.14.0
@@ -24,7 +24,7 @@ fsspec==2026.2.0
 gitdb==4.0.12
 GitPython==3.1.46
 greenlet==3.3.1
-gunicorn==25.3.0
+gunicorn==21.2.0
 h11==0.16.0
 hf-xet==1.2.0
 httpcore==1.0.9

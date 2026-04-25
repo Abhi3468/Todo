@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: todo-app
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn todo.wsgi
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DJANGO_SETTINGS_MODULE
+        value: todo.settings

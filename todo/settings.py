@@ -87,7 +87,7 @@ import dj_database_url
 DATABASES = {
     'default': dj_database_url.config(
         default='mysql://root:new_password@localhost:3306/todo',
-        conn_max_age=600,
+        conn_max_age=0,  # Set to 0 to prevent "Lost connection" errors on cloud providers
     )
 }
 

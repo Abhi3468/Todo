@@ -79,17 +79,31 @@ TEMPLATES = [
 WSGI_APPLICATION = 'todo.wsgi.application'
 
 
-import dj_database_url
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default='mysql://root:new_password@localhost:3306/todo',
-        conn_max_age=0,  # Set to 0 to prevent "Lost connection" errors on cloud providers
-    )
-}
+if dj_database_url and os.environ.get('DATABASE_URL'):
+    # LIVE: Use Render/Clever Cloud Database via environment variable
+    DATABASES = {
+        'default': dj_database_url.config(conn_max_age=0)
+    }
+else:
+    # LOCAL: Fallback to local MySQL for development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'todo',
+            'USER': 'root',
+            'PASSWORD': 'new_password',
+            'HOST': 'localhost',
+            'PORT': '3306',
+        }
+    }
 
 
 # Password validation

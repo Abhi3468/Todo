@@ -1,29 +1,55 @@
 <div class="container">
     <h2>LOGIN CREDENTIALS</h2>
 
-    <form method="post" autocomplete="off">
+    <!-- Login Method Toggle -->
+    <div class="method-toggle">
+        <button type="button" id="btn-password" class="active" onclick="switchMethod('password')">Password</button>
+        <button type="button" id="btn-otp" onclick="switchMethod('otp')">OTP</button>
+    </div>
+
+    {% if messages %}
+    <div class="messages" style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <p
+            style="color: {% if 'error' in message.tags %}#e74c3c{% else %}#2ecc71{% endif %}; font-size: 13px; font-weight: 500;">
+            {{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="login-form" autocomplete="off">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Login</button>
+        <input type="hidden" name="login_method" id="login_method" value="password">
+
+        <!-- Username field (Always Visible) -->
+        <div class="form-group">
+            <label for="id_username">Username</label>
+            <input type="text" name="username" id="id_username" required placeholder="Enter username">
+        </div>
+
+        <!-- Password Field (Password Method) -->
+        <div id="password-section">
+            <div class="form-group">
+                <label for="id_password">Password</label>
+                <input type="password" name="password" id="id_password" placeholder="Enter password">
+            </div>
+            <button type="submit">Login with Password</button>
+        </div>
+
+        <!-- OTP Section (OTP Method) -->
+        <div id="otp-section" style="display: none;">
+            <div class="form-group otp-group">
+                <label for="otp_code">OTP Code</label>
+                <div class="otp-input-row">
+                    <input type="text" name="otp_code" id="otp_code" placeholder="6-digit code" maxlength="6">
+                    <button type="button" id="send-otp-btn" class="secondary-btn" onclick="sendOTP()">Get OTP</button>
+                </div>
+            </div>
+            <button type="submit">Login with OTP</button>
+        </div>
     </form>
-    <!-- J -->
-    <script>
 
-        document.addEventListener("DOMContentLoaded", function () {
-            var inputs = document.querySelectorAll('form input[type="text"], form input[type="password"]');
-            inputs.forEach(function (input) {
-
-                input.setAttribute('readonly', 'readonly');
-                input.value = '';
-
-                input.addEventListener('focus', function () {
-                    input.removeAttribute('readonly');
-                });
-            });
-        });
-    </script>
-
-    <p>
+    <p id="forgot-pass-link">
         <a href="{% url 'password_reset' %}">Forgot password?</a>
     </p>
 
@@ -33,7 +59,80 @@
     </p>
 </div>
 
-<!--css  -->
+<script>
+    function switchMethod(method) {
+        const methodInput = document.getElementById('login_method');
+        const passSection = document.getElementById('password-section');
+        const otpSection = document.getElementById('otp-section');
+        const passBtn = document.getElementById('btn-password');
+        const otpBtn = document.getElementById('btn-otp');
+        const forgotLink = document.getElementById('forgot-pass-link');
+
+        methodInput.value = method;
+
+        if (method === 'password') {
+            passSection.style.display = 'block';
+            otpSection.style.display = 'none';
+            passBtn.classList.add('active');
+            otpBtn.classList.remove('active');
+            forgotLink.style.display = 'block';
+            document.getElementById('id_password').setAttribute('required', 'required');
+            document.getElementById('otp_code').removeAttribute('required');
+        } else {
+            passSection.style.display = 'none';
+            otpSection.style.display = 'block';
+            passBtn.classList.remove('active');
+            otpBtn.classList.add('active');
+            forgotLink.style.display = 'none';
+            document.getElementById('id_password').removeAttribute('required');
+            document.getElementById('otp_code').setAttribute('required', 'required');
+        }
+    }
+
+    async function sendOTP() {
+        const username = document.getElementById('id_username').value;
+        const btn = document.getElementById('send-otp-btn');
+
+        if (!username) {
+            alert("Please enter your username first.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Sending...";
+
+        try {
+            const response = await fetch("{% url 'send_otp_api' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ username: username })
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                alert("OTP has been sent to your registered email.");
+                btn.innerText = "Resend";
+            } else {
+                alert(data.message || "Error sending OTP.");
+                btn.innerText = "Get OTP";
+            }
+        } catch (error) {
+            alert("Network error. Please try again.");
+            btn.innerText = "Get OTP";
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // Initialize required fields
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById('id_password').setAttribute('required', 'required');
+    });
+</script>
+
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
@@ -57,97 +156,107 @@
         background-color: #1e1e1e;
         border-radius: 12px;
         box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
-        padding: 40px;
+        padding: 30px;
         width: 90%;
         max-width: 400px;
         text-align: center;
     }
 
-    /* Responsive adjustments for mobile screens */
-    @media (max-width: 480px) {
-        .container {
-            padding: 30px 20px;
-            /* Reduce padding on smaller screens */
-        }
-
-        h2 {
-            font-size: 1.5rem;
-            /* Slightly smaller heading */
-        }
-    }
-
     h2 {
-        margin-top: 0;
-        margin-bottom: 30px;
-        color: #ffffff;
+        margin-bottom: 25px;
         font-weight: 600;
+        font-size: 1.4rem;
     }
 
-    form {
+    .method-toggle {
         display: flex;
-        flex-direction: column;
-        gap: 20px;
+        background: #2c2c2c;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        padding: 4px;
+    }
+
+    .method-toggle button {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #888;
+        padding: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        border-radius: 6px;
+        transition: all 0.3s;
+    }
+
+    .method-toggle button.active {
+        background: #8e44ad;
+        color: white;
+    }
+
+    .form-group {
         text-align: left;
+        margin-bottom: 20px;
     }
 
     label {
-        font-weight: 500;
-        color: #cccccc;
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+        color: #aaa;
     }
 
-    input[type="text"],
-    input[type="password"] {
+    input {
+        width: 100%;
         padding: 12px;
         border: none;
         border-radius: 6px;
+        background: #2c2c2c;
+        color: white;
         font-size: 14px;
-        background-color: #2c2c2c;
-        color: #ffffff;
-        transition: border-color 0.3s;
     }
 
-    input:focus {
-        outline: none;
-        border-color: #8e44ad;
+    .otp-input-row {
+        display: flex;
+        gap: 10px;
+    }
+
+    .secondary-btn {
+        background: #34495e !important;
+        white-space: nowrap;
+        width: auto !important;
+        padding: 0 15px !important;
+        font-size: 12px !important;
     }
 
     button[type="submit"] {
+        width: 100%;
         padding: 12px;
         background-color: #8e44ad;
         border: none;
         border-radius: 6px;
-        color: #ffffff;
-        font-size: 16px;
+        color: white;
         font-weight: 600;
         cursor: pointer;
-        transition: background-color 0.3s;
+        transition: 0.3s;
     }
 
     button[type="submit"]:hover {
         background-color: #9b59b6;
     }
 
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     p {
-        margin: 15px 0 0;
-        color: #cccccc;
-        font-size: 14px;
+        margin-top: 15px;
+        font-size: 13px;
+        color: #888;
     }
 
     a {
         color: #8e44ad;
         text-decoration: none;
-        transition: color 0.3s;
-    }
-
-    a:hover {
-        color: #9b59b6;
-    }
-
-    .errorlist {
-        color: #e74c3c;
-        font-size: 12px;
-        margin: 0;
-        padding: 0;
-        list-style: none;
     }
 </style>

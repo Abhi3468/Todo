@@ -7,6 +7,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do App</title>
     <link rel="stylesheet" href="{% static 'tasks/css/style.css' %}">
+    <script>
+        // Prevent going back to the OTP/Login screens after logging in
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function () {
+            if (confirm("If you go back, you will be logged out. Do you want to continue?")) {
+                 document.getElementById('logout-form').submit();
+            } else {
+                window.history.pushState(null, null, window.location.href);
+            }
+        };
+    </script>
 </head>
 
 <body>
@@ -22,7 +33,7 @@
                 </div>
             </div>
 
-            <form action="{% url 'logout' %}" method="post">
+            <form id="logout-form" action="{% url 'logout' %}" method="post">
                 {% csrf_token %}
                 <button type="submit" class="logout-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"

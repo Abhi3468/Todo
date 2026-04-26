@@ -3,9 +3,14 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from tasks.forms import CustomPasswordResetForm
 
+from tasks.views import login_view, verify_otp_signup, verify_otp_login, send_otp_api
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('login/', auth_views.LoginView.as_view(), name='login'),
+    path('login/', login_view, name='login'),
+    path('api/send-otp/', send_otp_api, name='send_otp_api'),
+    path('verify-otp-signup/', verify_otp_signup, name='verify_otp_signup'),
+    path('verify-otp-login/', verify_otp_login, name='verify_otp_login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 
     path('password-reset/',

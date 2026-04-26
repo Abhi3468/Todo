@@ -1,0 +1,158 @@
+<script>
+    let isSubmitting = false;
+
+    // 1. Prevent "Back" button navigation by pushing a state
+    window.history.pushState(null, null, window.location.href);
+    window.onpopstate = function () {
+        if (confirm("If you go back, your verification will be cancelled. Do you want to continue?")) {
+             window.location.href = "{% url 'login' %}";
+        } else {
+            window.history.pushState(null, null, window.location.href);
+        }
+    };
+
+    // 2. Warning on Reload, Back, or Closing Tab (but NOT on submit)
+    window.onbeforeunload = function() {
+        if (!isSubmitting) {
+            return "Your verification is in progress. Leaving this page will cancel the process.";
+        }
+    };
+
+    // Set flag when form is submitted
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector('form');
+        if (form) {
+            form.onsubmit = function() {
+                isSubmitting = true;
+            };
+        }
+    });
+</script>
+
+<div class="container">
+    <h2>VERIFY OTP</h2>
+    <p>A 6-digit code has been sent to your email. Please enter it below to complete {{ type }}.</p>
+
+    {% if messages %}
+    <div class="messages" style="margin-bottom: 20px;">
+        {% for message in messages %}
+            {% if "error" in message.tags %}
+                <p style="color: #e74c3c; font-weight: bold; margin: 5px 0;">{{ message }}</p>
+            {% else %}
+                <p style="color: #2ecc71; font-weight: bold; margin: 5px 0;">{{ message }}</p>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" autocomplete="off">
+        {% csrf_token %}
+        <div class="otp-input-container">
+            <input type="text" name="otp_code" maxlength="6" placeholder="Enter 6-digit OTP" required>
+        </div>
+        <button type="submit">Verify & Continue</button>
+    </form>
+
+    <p>
+        Didn't receive the code?
+        <a href="#" onclick="location.reload();">Resend OTP</a>
+    </p>
+    
+    <p>
+        <a href="{% url 'login' %}">Back to Login</a>
+    </p>
+</div>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Poppins', sans-serif;
+        background-color: #121212;
+        color: #ffffff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    .container {
+        background-color: #1e1e1e;
+        border-radius: 12px;
+        box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+        padding: 40px;
+        width: 90%;
+        max-width: 400px;
+        text-align: center;
+    }
+
+    h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #ffffff;
+        font-weight: 600;
+    }
+
+    p {
+        margin-bottom: 20px;
+        color: #cccccc;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    input[type="text"] {
+        padding: 12px;
+        border: none;
+        border-radius: 6px;
+        font-size: 18px;
+        letter-spacing: 4px;
+        text-align: center;
+        background-color: #2c2c2c;
+        color: #ffffff;
+        width: 100%;
+        transition: border-color 0.3s;
+    }
+
+    input:focus {
+        outline: none;
+        box-shadow: 0 0 5px #8e44ad;
+    }
+
+    button[type="submit"] {
+        padding: 12px;
+        background-color: #8e44ad;
+        border: none;
+        border-radius: 6px;
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    button[type="submit"]:hover {
+        background-color: #9b59b6;
+    }
+
+    a {
+        color: #8e44ad;
+        text-decoration: none;
+        transition: color 0.3s;
+    }
+
+    a:hover {
+        color: #9b59b6;
+    }
+</style>

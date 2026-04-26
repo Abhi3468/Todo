@@ -2,7 +2,7 @@ services:
   - type: web
     name: todo-app
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: ./build.sh
     startCommand: gunicorn todo.wsgi
     envVars:
       - key: PYTHON_VERSION

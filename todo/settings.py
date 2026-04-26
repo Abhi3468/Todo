@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-_g4!g7ltbj980%-d53bg+t&t@0v@it5g#+^gqvz(g877$#cx11
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['todo-emug.onrender.com']
+ALLOWED_HOSTS = ['todo-emug.onrender.com', '127.0.0.1']
 
 
 # Application definition
@@ -79,18 +79,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'todo.wsgi.application'
 
 
+import dj_database_url
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'todo',
-        'USER': 'root',
-        'PASSWORD': 'new_password',
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
+    'default': dj_database_url.config(
+        default='mysql://root:new_password@localhost:3306/todo',
+        conn_max_age=600,
+    )
 }
 
 

@@ -3,7 +3,7 @@ services:
     name: todo-app
     runtime: python
     buildCommand: ./build.sh
-    startCommand: gunicorn todo.wsgi
+    startCommand: python -m gunicorn todo.wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.3

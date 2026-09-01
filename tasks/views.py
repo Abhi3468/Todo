@@ -41,6 +41,11 @@ def health_check(request):
         "database": "connected" if db_ok else "disconnected"
     }, status=status_code)
 
+import os
+import json
+import urllib.request
+import urllib.error
+
 def generate_otp(user=None, email=None):
     code = str(secrets.randbelow(900000) + 100000)
     email = (email or (user.email if user else "") or "").strip()
@@ -58,11 +63,38 @@ def generate_otp(user=None, email=None):
 
     print(f"[OTP DEBUG] Generated code '{code}' for recipient '{recipient}'")
 
+    # 1. Try Resend HTTPS API (Port 443 - Never blocked on Render Free Tier)
+    resend_api_key = os.environ.get('RESEND_API_KEY', '').strip()
+    if recipient and resend_api_key:
+        try:
+            from_email = os.environ.get('DEFAULT_FROM_EMAIL', 'ToDo App <onboarding@resend.dev>').strip()
+            payload = json.dumps({
+                "from": from_email,
+                "to": [recipient],
+                "subject": subject,
+                "text": message
+            }).encode('utf-8')
+            req = urllib.request.Request(
+                "https://api.resend.com/emails",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {resend_api_key}",
+                    "Content-Type": "application/json"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                print(f"[RESEND EMAIL] Sent via HTTPS API to '{recipient}', status: {resp.status}")
+                return code
+        except Exception as e:
+            print(f"[RESEND API ERROR] {e}")
+
+    # 2. Standard SMTP Fallback (For local dev or unblocked servers)
     if recipient and getattr(settings, 'EMAIL_HOST_USER', None):
         try:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=True)
         except BaseException as e:
             print(f"[EMAIL TIMEOUT/ERROR] Outbound email attempt caught safely: {e}")
+
     return code
 
 def signup_view(request):

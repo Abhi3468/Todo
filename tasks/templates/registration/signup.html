@@ -10,7 +10,7 @@
 
     <div class="form-field">
         <label for="id_username">Username</label>
-        <input type="text" name="username" id="id_username" required autocomplete="off" autofocus>
+        <input type="text" name="username" id="id_username" required autocomplete="username" autofocus>
         {% if form.username.errors %}
             <div class="field-error">{{ form.username.errors.0 }}</div>
         {% endif %}
@@ -18,7 +18,7 @@
 
     <div class="form-field">
         <label for="id_email">Email address</label>
-        <input type="email" name="email" id="id_email" placeholder="name@example.com" required autocomplete="off">
+        <input type="email" name="email" id="id_email" placeholder="name@example.com" required autocomplete="email">
         {% if form.email.errors %}
             <div class="field-error">{{ form.email.errors.0 }}</div>
         {% endif %}
@@ -47,17 +47,4 @@
 <div class="auth-footer">
     Already have an account? <a class="text-link" href="{% url 'login' %}">Sign in</a>
 </div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        var inputs = document.querySelectorAll('form input[type="text"], form input[type="email"], form input[type="password"]');
-        inputs.forEach(function (input) {
-            input.setAttribute('readonly', 'readonly');
-            input.value = '';
-            input.addEventListener('focus', function () {
-                input.removeAttribute('readonly');
-            });
-        });
-    });
-</script>
 {% endblock %}

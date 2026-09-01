@@ -33,7 +33,29 @@ SECRET_KEY = os.environ.get('SECRET_KEY') or 'django-insecure-todo-dev-key-98765
 # Local `runserver` should work over HTTP by default. Render explicitly sets this to False.
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'todo-emug.onrender.com,127.0.0.1').split(',')
+raw_hosts = os.environ.get('ALLOWED_HOSTS', 'todo-emug.onrender.com,127.0.0.1,localhost,.onrender.com')
+ALLOWED_HOSTS = ['*'] if raw_hosts == '*' else [h.strip() for h in raw_hosts.split(',') if h.strip()]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
 
 
 # Application definition

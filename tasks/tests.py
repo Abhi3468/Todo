@@ -121,3 +121,31 @@ class TaskWebViewTests(TestCase):
         task = Task.objects.create(user=self.user, username=self.user.username, title='Protect method')
         response = self.client.get(reverse('toggle_task', args=[task.id]))
         self.assertEqual(response.status_code, 405)
+
+
+class SignupFlowTests(TestCase):
+    def test_signup_post_generates_otp_and_redirects(self):
+        response = self.client.post(reverse('signup'), {
+            'username': 'newuser',
+            'email': 'newuser@example.com',
+            'password1': 'StrongPass123!',
+            'password2': 'StrongPass123!',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('verify_otp_signup'))
+        self.assertTrue(OTPCode.objects.filter(email='newuser@example.com').exists())
+
+    def test_verify_otp_signup_creates_user(self):
+        self.client.post(reverse('signup'), {
+            'username': 'newuser2',
+            'email': 'newuser2@example.com',
+            'password1': 'StrongPass123!',
+            'password2': 'StrongPass123!',
+        })
+        otp_code = OTPCode.objects.get(email='newuser2@example.com').code
+        response = self.client.post(reverse('verify_otp_signup'), {
+            'otp_code': otp_code
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(username='newuser2').exists())
+

@@ -1,29 +1,48 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, authenticate
-from httpcore import request
-from .models import Task, OTPCode
+from django.http import FileResponse, JsonResponse
+from django.db import connection
+from .models import Task, OTPCode, AuditLog
 from .forms import CustomUserCreationForm
 from django.contrib import messages
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .serializers import TaskSerializer
-from django.http import FileResponse
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from django.contrib.auth.models import User
-import random
+import secrets
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
+
+def health_check(request):
+    try:
+        connection.ensure_connection()
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    status = "healthy" if db_ok else "unhealthy"
+    status_code = 200 if db_ok else 503
+    return JsonResponse({
+        "status": status,
+        "database": "connected" if db_ok else "disconnected"
+    }, status=status_code)
 
 def generate_otp(user=None, email=None):
-    code = str(random.randint(100000, 999999))
-    
-    # If we have a user but no email provided, get it from the user account
+    code = str(secrets.randbelow(900000) + 100000)
     if user and not email:
         email = user.email
         
@@ -42,7 +61,10 @@ def signup_view(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             # Don't save user yet, store data in session
-            request.session['signup_data'] = request.POST
+            request.session['signup_data'] = {
+                key: form.cleaned_data[key]
+                for key in ('username', 'email', 'password1', 'password2')
+            }
             email = form.cleaned_data.get('email')
             generate_otp(email=email)
             messages.info(request, f"An OTP has been sent to {email}. Please verify.")
@@ -50,6 +72,18 @@ def signup_view(request):
     else:
         form = CustomUserCreationForm()
     return render(request, "registration/signup.html", {"form": form})
+
+
+@require_POST
+def resend_signup_otp(request):
+    signup_data = request.session.get('signup_data')
+    if not signup_data:
+        messages.info(request, "Start account creation again to receive a verification code.")
+        return redirect('signup')
+
+    generate_otp(email=signup_data['email'])
+    messages.success(request, "A new verification code has been sent.")
+    return redirect('verify_otp_signup')
 
 def verify_otp_signup(request):
     if request.method == "POST":
@@ -84,13 +118,13 @@ def verify_otp_signup(request):
 @api_view(['POST'])
 @permission_classes([]) # Publicly accessible for login
 def send_otp_api(request):
-    username = request.data.get('username')
+    username = (request.data.get('username') or '').strip()
     try:
         user = User.objects.get(username=username)
         generate_otp(user=user)
-        return Response({'status': 'success', 'message': 'OTP sent to your email.'})
+        return Response({'status': 'success', 'message': 'If the account exists, a code has been sent.'})
     except User.DoesNotExist:
-        return Response({'status': 'error', 'message': 'User not found.'}, status=404)
+        return Response({'status': 'success', 'message': 'If the account exists, a code has been sent.'})
 
 def login_view(request):
     if request.method == "POST":
@@ -102,6 +136,7 @@ def login_view(request):
                 login(request, form.get_user())
                 messages.success(request, f"Welcome back, {request.user.username}!")
                 return redirect("/")
+            messages.error(request, "Enter a valid username and password.")
         
         elif method == "otp":
             username = request.POST.get('username')
@@ -114,12 +149,18 @@ def login_view(request):
                     otp_record.is_used = True
                     otp_record.save()
                     login(request, user)
+                    AuditLog.log_action(
+                        user=user,
+                        action="USER_LOGIN_OTP",
+                        ip_address=get_client_ip(request),
+                        details=f"User {user.username} logged in via OTP"
+                    )
                     messages.success(request, f"Logged in via OTP! Welcome, {user.username}!")
                     return redirect("/")
                 else:
                     messages.error(request, "Invalid or expired OTP.")
             except User.DoesNotExist:
-                messages.error(request, "User not found.")
+                messages.error(request, "Invalid or expired OTP.")
                 
         form = AuthenticationForm()
     else:
@@ -154,32 +195,53 @@ def verify_otp_login(request):
 @login_required
 def task_list(request):
     if request.method == "POST":
-        title = request.POST.get('title')
+        title = request.POST.get('title', '').strip()
 
         if title:
-            Task.objects.create(
+            task = Task.objects.create(
                 title=title,
                 user=request.user,
                 username=request.user.username  
+            )
+            AuditLog.log_action(
+                user=request.user,
+                action="TASK_CREATED",
+                ip_address=get_client_ip(request),
+                details=f"Created task '{task.title}' (ID: {task.id})"
             )
 
             messages.success(request, "Task added successfully!")
         return redirect('/')
 
-    tasks = Task.objects.filter(user=request.user).order_by('completed', '-id')
+    tasks = Task.objects.filter(user=request.user)
     return render(request, 'tasks/index.html', {'tasks': tasks})
 
 @login_required
+@require_POST
 def toggle_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, user=request.user)
     task.completed = not task.completed
     task.save()
+    AuditLog.log_action(
+        user=request.user,
+        action="TASK_TOGGLED",
+        ip_address=get_client_ip(request),
+        details=f"Toggled task '{task.title}' (ID: {task.id}) completed={task.completed}"
+    )
     return redirect('/')
 
 @login_required
+@require_POST
 def delete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, user=request.user)
+    title = task.title
     task.delete()
+    AuditLog.log_action(
+        user=request.user,
+        action="TASK_DELETED",
+        ip_address=get_client_ip(request),
+        details=f"Deleted task '{title}' (ID: {task_id})"
+    )
     return redirect('/')
 
 # --- REST API VIEWS ---
@@ -188,13 +250,19 @@ def delete_task(request, task_id):
 @permission_classes([IsAuthenticated])
 def api_task_list(request):
     if request.method == 'GET':
-        tasks = Task.objects.filter(user=request.user).order_by('completed', '-id')
+        tasks = Task.objects.filter(user=request.user)
         serializer = TaskSerializer(tasks, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
         serializer = TaskSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user, username=request.user.username)
+            task = serializer.save(user=request.user, username=request.user.username)
+            AuditLog.log_action(
+                user=request.user,
+                action="API_TASK_CREATED",
+                ip_address=get_client_ip(request),
+                details=f"API Created task '{task.title}' (ID: {task.id})"
+            )
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
@@ -204,6 +272,12 @@ def api_toggle_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, user=request.user)
     task.completed = not task.completed
     task.save()
+    AuditLog.log_action(
+        user=request.user,
+        action="API_TASK_TOGGLED",
+        ip_address=get_client_ip(request),
+        details=f"API Toggled task '{task.title}' (ID: {task.id}) completed={task.completed}"
+    )
     serializer = TaskSerializer(task)
     return Response(serializer.data)
 
@@ -211,7 +285,14 @@ def api_toggle_task(request, task_id):
 @permission_classes([IsAuthenticated])
 def api_delete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, user=request.user)
+    title = task.title
     task.delete()
+    AuditLog.log_action(
+        user=request.user,
+        action="API_TASK_DELETED",
+        ip_address=get_client_ip(request),
+        details=f"API Deleted task '{title}' (ID: {task_id})"
+    )
     return Response({'status': 'deleted'}, status=204)
 
 @api_view(['GET'])
@@ -227,7 +308,7 @@ def api_download_pdf(request):
     
     # Task List
     p.setFont("Helvetica", 14)
-    tasks = Task.objects.filter(user=request.user).order_by('completed', '-id')
+    tasks = Task.objects.filter(user=request.user)
     
     y = height - 100
     for task in tasks:

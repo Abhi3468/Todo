@@ -2,10 +2,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from tasks.forms import CustomPasswordResetForm
-
-from tasks.views import login_view, verify_otp_signup, verify_otp_login, send_otp_api
+from tasks.views import login_view, verify_otp_signup, verify_otp_login, send_otp_api, health_check
 
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('admin/', admin.site.urls),
     path('login/', login_view, name='login'),
     path('api/send-otp/', send_otp_api, name='send_otp_api'),

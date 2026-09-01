@@ -1,0 +1,23 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}FocusList{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'tasks/css/auth.css' %}">
+</head>
+<body class="auth-page">
+    <main class="auth-shell">
+        <a class="brand" href="{% url 'login' %}"><span>✓</span> FocusList</a>
+        <section class="auth-card">
+            {% if messages %}
+                <div class="messages" aria-live="polite">
+                    {% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}
+                </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+</body>
+</html>

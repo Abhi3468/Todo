@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # import pymysql
 
@@ -19,18 +20,20 @@ import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_g4!g7ltbj980%-d53bg+t&t@0v@it5g#+^gqvz(g877$#cx11'
+SECRET_KEY = os.environ.get('SECRET_KEY') or 'django-insecure-todo-dev-key-9876543210'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Local `runserver` should work over HTTP by default. Render explicitly sets this to False.
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['todo-emug.onrender.com', '127.0.0.1']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'todo-emug.onrender.com,127.0.0.1').split(',')
 
 
 # Application definition
@@ -48,13 +51,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',    
 ]
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -93,15 +96,11 @@ if dj_database_url and os.environ.get('DATABASE_URL'):
         'default': dj_database_url.config(conn_max_age=0)
     }
 else:
-    # LOCAL: Fallback to local MySQL for development
+    # SQLite keeps local development and CI self-contained. Production uses DATABASE_URL.
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'todo',
-            'USER': 'root',
-            'PASSWORD': 'new_password',
-            'HOST': 'localhost',
-            'PORT': '3306',
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
@@ -165,7 +164,15 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = 'abhishekabhi.r.2001@gmail.com'      # 👈 apna gmail
-EMAIL_HOST_PASSWORD = 'izidqphvkzzmdwfj'  # 👈 App Password (spaces optional)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
-# DEFAULT_FROM_EMAIL = 'ToDo App <abhishekabhi.r.2001@gmail.com>'
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Keep local runserver on HTTP even if DEBUG is disabled. Production sets this
+# explicitly through its environment configuration.
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() == 'true'

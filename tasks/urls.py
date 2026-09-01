@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import task_list, delete_task, toggle_task, signup_view
+from .views import task_list, delete_task, toggle_task, signup_view, resend_signup_otp
 from .views import api_task_list, api_toggle_task, api_delete_task, api_download_pdf
 
 urlpatterns = [
@@ -7,6 +7,7 @@ urlpatterns = [
     path('delete/<int:task_id>/', delete_task, name='delete_task'),
     path('toggle/<int:task_id>/', toggle_task, name='toggle_task'),
     path('signup/', signup_view, name='signup'),
+    path('signup/resend-otp/', resend_signup_otp, name='resend_signup_otp'),
     
     # REST API endpoints
     path('api/tasks/', api_task_list, name='api_task_list'),

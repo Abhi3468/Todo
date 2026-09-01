@@ -10,6 +10,12 @@ class CustomUserCreationForm(UserCreationForm):
         model = User
         fields = ("username", "email", "password1", "password2")
 
+    def clean_email(self):
+        email = self.cleaned_data['email'].lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError("An account with this email already exists. Please sign in instead.")
+        return email
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data["email"]

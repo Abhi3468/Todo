@@ -17,18 +17,15 @@
             return "Your verification is in progress. Leaving this page will cancel the process.";
         }
     };
-    document.addEventListener("DOMContentLoaded", function() {
-        const form = document.querySelector('form');
-        if (form) {
-            form.onsubmit = function() { isSubmitting = true; };
-        }
-    });
+    function allowNav() {
+        isSubmitting = true;
+    }
 </script>
 
 <h1>Verify code</h1>
 <p class="lede">A 6-digit verification code has been sent to your email to complete {{ type }}.</p>
 
-<form method="post" autocomplete="off">
+<form method="post" autocomplete="off" onsubmit="allowNav()">
     {% csrf_token %}
     <div class="form-field">
         <label for="id_otp_code">Email code</label>
@@ -37,8 +34,15 @@
     <button class="primary-btn" type="submit">Verify & continue</button>
 </form>
 
-<div class="split-links">
-    <a class="text-link" href="#" onclick="location.reload();">Resend code</a>
-    <a class="text-link" href="{% url 'login' %}">Cancel & sign in</a>
+<div class="split-links" style="align-items: center;">
+    {% if type == "Signup" %}
+        <form method="post" action="{% url 'resend_signup_otp' %}" style="display:inline;" onsubmit="allowNav()">
+            {% csrf_token %}
+            <button type="submit" class="text-link" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;">Resend code</button>
+        </form>
+    {% else %}
+        <a class="text-link" href="{% url 'login' %}" onclick="allowNav()">Resend code</a>
+    {% endif %}
+    <a class="text-link" href="{% url 'login' %}" onclick="allowNav()">Cancel & sign in</a>
 </div>
 {% endblock %}

@@ -51,13 +51,16 @@ def generate_otp(user=None, email=None):
     
     subject = "Your ToDo App OTP Code"
     message = f"Your OTP code is: {code}. It is valid for 5 minutes."
-    recipient = email if email else user.email
+    recipient = email if email else (user.email if user else "")
     
-    try:
-        if recipient and settings.DEFAULT_FROM_EMAIL:
+    # Print to server console for dev/testing visibility
+    print(f"[OTP DEBUG] Generated code '{code}' for recipient '{recipient}'")
+    
+    if recipient and getattr(settings, 'EMAIL_HOST_USER', None):
+        try:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=True)
-    except Exception:
-        pass
+        except Exception:
+            pass
     return code
 
 def signup_view(request):

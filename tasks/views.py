@@ -43,42 +43,48 @@ def health_check(request):
 
 def generate_otp(user=None, email=None):
     code = str(secrets.randbelow(900000) + 100000)
-    if user and not email:
-        email = user.email
-        
-    OTPCode.objects.filter(user=user, email=email).update(is_used=True) # Invalidate old codes
+    email = (email or (user.email if user else "") or "").strip()
+
+    if user:
+        OTPCode.objects.filter(user=user).update(is_used=True)
+    if email:
+        OTPCode.objects.filter(email=email).update(is_used=True)
+
     OTPCode.objects.create(user=user, email=email, code=code)
-    
+
     subject = "Your ToDo App OTP Code"
     message = f"Your OTP code is: {code}. It is valid for 5 minutes."
-    recipient = email if email else (user.email if user else "")
-    
-    # Print to server console for dev/testing visibility
+    recipient = email
+
     print(f"[OTP DEBUG] Generated code '{code}' for recipient '{recipient}'")
-    
+
     if recipient and getattr(settings, 'EMAIL_HOST_USER', None):
         try:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=True)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[EMAIL ERROR] {e}")
     return code
 
 def signup_view(request):
     if request.method == "POST":
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            # Don't save user yet, store data in session
-            request.session['signup_data'] = {
-                key: form.cleaned_data[key]
-                for key in ('username', 'email', 'password1', 'password2')
-            }
-            email = form.cleaned_data.get('email')
-            code = generate_otp(email=email)
-            if not getattr(settings, 'EMAIL_HOST_USER', None):
-                messages.info(request, f"An OTP code has been generated: {code} (SMTP credentials not set in environment).")
-            else:
-                messages.info(request, f"An OTP code has been sent to {email}. (Code: {code})")
-            return redirect('verify_otp_signup')
+        try:
+            form = CustomUserCreationForm(request.POST)
+            if form.is_valid():
+                # Don't save user yet, store data in session
+                request.session['signup_data'] = {
+                    key: form.cleaned_data[key]
+                    for key in ('username', 'email', 'password1', 'password2')
+                }
+                email = form.cleaned_data.get('email')
+                code = generate_otp(email=email)
+                if not getattr(settings, 'EMAIL_HOST_USER', None):
+                    messages.info(request, f"An OTP code has been generated: {code} (SMTP credentials not set in environment).")
+                else:
+                    messages.info(request, f"An OTP code has been sent to {email}. (Code: {code})")
+                return redirect('verify_otp_signup')
+        except Exception as e:
+            print(f"[SIGNUP ERROR] {e}")
+            messages.error(request, f"An unexpected error occurred during signup: {e}")
     else:
         form = CustomUserCreationForm()
     return render(request, "registration/signup.html", {"form": form})
@@ -100,33 +106,41 @@ def resend_signup_otp(request):
 
 def verify_otp_signup(request):
     if request.method == "POST":
-        otp_code = request.POST.get('otp_code')
-        signup_data = request.session.get('signup_data')
-        
-        if not signup_data:
-            return redirect('signup')
+        try:
+            otp_code = (request.POST.get('otp_code') or '').strip()
+            signup_data = request.session.get('signup_data')
             
-        email = signup_data.get('email')
-        otp_record = OTPCode.objects.filter(email=email, code=otp_code).last()
-        
-        if otp_record and otp_record.is_valid():
-            otp_record.is_used = True
-            otp_record.save()
+            if not signup_data:
+                messages.warning(request, "Session expired. Please fill out the registration form again.")
+                return redirect('signup')
+                
+            email = signup_data.get('email')
+            otp_record = OTPCode.objects.filter(email=email, code=otp_code).last()
             
-            # Create user now
-            form = CustomUserCreationForm(signup_data)
-            if form.is_valid():
-                user = form.save()
-                login(request, user)
-                del request.session['signup_data']
-                messages.success(request, "Account created and verified successfully!")
-                return redirect("/")
-        else:
-            messages.error(request, "Invalid or expired OTP.")
+            if otp_record and otp_record.is_valid():
+                otp_record.is_used = True
+                otp_record.save()
+                
+                # Create user now
+                form = CustomUserCreationForm(signup_data)
+                if form.is_valid():
+                    user = form.save()
+                    login(request, user)
+                    if 'signup_data' in request.session:
+                        del request.session['signup_data']
+                    messages.success(request, "Account created and verified successfully!")
+                    return redirect("/")
+                else:
+                    for field, errors in form.errors.items():
+                        for error in errors:
+                            messages.error(request, f"{field}: {error}")
+            else:
+                messages.error(request, "Invalid or expired OTP.")
+        except Exception as e:
+            print(f"[VERIFY OTP ERROR] {e}")
+            messages.error(request, f"An error occurred during verification: {e}")
             
     return render(request, "registration/verify_otp.html", {"type": "Signup"})
-
-
 
 @api_view(['POST'])
 @permission_classes([]) # Publicly accessible for login

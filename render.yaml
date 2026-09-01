@@ -4,7 +4,7 @@ services:
     runtime: python
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --no-input
     startCommand: python manage.py migrate && python -m gunicorn todo.wsgi:application --bind 0.0.0.0:$PORT
-    healthCheckPath: /login/
+    healthCheckPath: /health/
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
@@ -17,6 +17,8 @@ services:
         value: "False"
       - key: SECURE_SSL_REDIRECT
         value: "True"
+      - key: ALLOWED_HOSTS
+        value: todo-emug.onrender.com
       - key: DATABASE_URL
         sync: false
       - key: EMAIL_HOST_USER
@@ -25,3 +27,9 @@ services:
         sync: false
       - key: DEFAULT_FROM_EMAIL
         sync: false
+
+databases:
+  - name: todo-db
+    databaseName: todo_db
+    user: todo_user
+    plan: free

@@ -61,8 +61,8 @@ def generate_otp(user=None, email=None):
     if recipient and getattr(settings, 'EMAIL_HOST_USER', None):
         try:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=True)
-        except Exception as e:
-            print(f"[EMAIL ERROR] {e}")
+        except BaseException as e:
+            print(f"[EMAIL TIMEOUT/ERROR] Outbound email attempt caught safely: {e}")
     return code
 
 def signup_view(request):

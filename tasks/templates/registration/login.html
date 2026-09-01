@@ -1,41 +1,49 @@
 {% extends 'registration/base.html' %}
-{% block title %}Sign in · FocusList{% endblock %}
+{% block title %}Sign in · TODO_List{% endblock %}
 {% block content %}
 <h1>Welcome back</h1>
 <p class="lede">Sign in to organise what matters today.</p>
 <div class="auth-tabs" role="tablist" aria-label="Sign-in method">
-    <button type="button" class="active" data-method="password">Password</button>
-    <button type="button" data-method="otp">Email code</button>
+  <button type="button" class="active" data-method="password">Password</button>
+  <button type="button" data-method="otp">Email code</button>
 </div>
 <form method="post" id="login-form">
-    {% csrf_token %}
-    <input type="hidden" name="login_method" id="login_method" value="password">
-    <div class="form-field"><label for="id_username">Username</label><input name="username" id="id_username" required autocomplete="username" autofocus></div>
-    <div id="password-section" class="form-field"><label for="id_password">Password</label><input type="password" name="password" id="id_password" required autocomplete="current-password"></div>
-    <div id="otp-section" hidden>
-        <div class="form-field"><label for="otp_code">Email code</label><div class="otp-row"><input class="otp-input" inputmode="numeric" pattern="[0-9]{6}" name="otp_code" id="otp_code" maxlength="6" placeholder="123456" autocomplete="one-time-code"><button class="secondary-btn" type="button" id="send-otp-btn">Send code</button></div><p class="hint" id="otp-status">We’ll send a six-digit code to the email saved on your account.</p></div>
+  {% csrf_token %}
+  <input type="hidden" name="login_method" id="login_method" value="password">
+  <div class="form-field"><label for="id_username">Username</label><input name="username" id="id_username" required
+      autocomplete="username" autofocus></div>
+  <div id="password-section" class="form-field"><label for="id_password">Password</label><input type="password"
+      name="password" id="id_password" required autocomplete="current-password"></div>
+  <div id="otp-section" hidden>
+    <div class="form-field"><label for="otp_code">Email code</label>
+      <div class="otp-row"><input class="otp-input" inputmode="numeric" pattern="[0-9]{6}" name="otp_code" id="otp_code"
+          maxlength="6" placeholder="123456" autocomplete="one-time-code"><button class="secondary-btn" type="button"
+          id="send-otp-btn">Send code</button></div>
+      <p class="hint" id="otp-status">We’ll send a six-digit code to the email saved on your account.</p>
     </div>
-    <button class="primary-btn" type="submit" id="submit-btn">Sign in</button>
+  </div>
+  <button class="primary-btn" type="submit" id="submit-btn">Sign in</button>
 </form>
-<div class="split-links"><a class="text-link" href="{% url 'password_reset' %}">Forgot password?</a><a class="text-link" href="{% url 'signup' %}">Create account</a></div>
+<div class="split-links"><a class="text-link" href="{% url 'password_reset' %}">Forgot password?</a><a class="text-link"
+    href="{% url 'signup' %}">Create account</a></div>
 <script>
-const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-const passwordSection = document.getElementById('password-section');
-const otpSection = document.getElementById('otp-section');
-const passwordInput = document.getElementById('id_password');
-const otpInput = document.getElementById('otp_code');
-document.querySelectorAll('[data-method]').forEach(button => button.addEventListener('click', () => {
-  const otp = button.dataset.method === 'otp';
-  document.querySelectorAll('[data-method]').forEach(item => item.classList.toggle('active', item === button));
-  document.getElementById('login_method').value = otp ? 'otp' : 'password';
-  passwordSection.hidden = otp; otpSection.hidden = !otp; passwordInput.required = !otp; otpInput.required = otp;
-  document.getElementById('submit-btn').textContent = otp ? 'Verify & sign in' : 'Sign in';
-}));
-document.getElementById('send-otp-btn').addEventListener('click', async () => {
-  const username = document.getElementById('id_username').value.trim(); const status = document.getElementById('otp-status'); const button = document.getElementById('send-otp-btn');
-  if (!username) { status.textContent = 'Enter your username first.'; return; }
-  button.disabled = true; status.textContent = 'Sending code…';
-  try { const response = await fetch('{% url "send_otp_api" %}', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken}, body:JSON.stringify({username})}); const data = await response.json(); status.textContent = data.message || 'Check your email for a code.'; } catch (_) { status.textContent = 'Could not send a code. Please try again.'; } finally { button.disabled = false; }
-});
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const passwordSection = document.getElementById('password-section');
+  const otpSection = document.getElementById('otp-section');
+  const passwordInput = document.getElementById('id_password');
+  const otpInput = document.getElementById('otp_code');
+  document.querySelectorAll('[data-method]').forEach(button => button.addEventListener('click', () => {
+    const otp = button.dataset.method === 'otp';
+    document.querySelectorAll('[data-method]').forEach(item => item.classList.toggle('active', item === button));
+    document.getElementById('login_method').value = otp ? 'otp' : 'password';
+    passwordSection.hidden = otp; otpSection.hidden = !otp; passwordInput.required = !otp; otpInput.required = otp;
+    document.getElementById('submit-btn').textContent = otp ? 'Verify & sign in' : 'Sign in';
+  }));
+  document.getElementById('send-otp-btn').addEventListener('click', async () => {
+    const username = document.getElementById('id_username').value.trim(); const status = document.getElementById('otp-status'); const button = document.getElementById('send-otp-btn');
+    if (!username) { status.textContent = 'Enter your username first.'; return; }
+    button.disabled = true; status.textContent = 'Sending code…';
+    try { const response = await fetch('{% url "send_otp_api" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, body: JSON.stringify({ username }) }); const data = await response.json(); status.textContent = data.message || 'Check your email for a code.'; } catch (_) { status.textContent = 'Could not send a code. Please try again.'; } finally { button.disabled = false; }
+  });
 </script>
 {% endblock %}

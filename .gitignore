@@ -1,6 +1,36 @@
+# Python / Django
 venv/
+.venv/
 __pycache__/
-.env
 *.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Environment & secrets
+.env
+.env.*
+
+# Django artifacts
 db.sqlite3
 staticfiles/
+media/
+*.log
+
+# Coverage / test artifacts
+.coverage
+htmlcov/
+coverage.xml
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Distribution
+*.egg-info/
+dist/
+build/

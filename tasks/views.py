@@ -73,8 +73,11 @@ def signup_view(request):
                 for key in ('username', 'email', 'password1', 'password2')
             }
             email = form.cleaned_data.get('email')
-            generate_otp(email=email)
-            messages.info(request, f"An OTP has been sent to {email}. Please verify.")
+            code = generate_otp(email=email)
+            if not getattr(settings, 'EMAIL_HOST_USER', None):
+                messages.info(request, f"An OTP code has been generated: {code} (SMTP credentials not set in environment).")
+            else:
+                messages.info(request, f"An OTP code has been sent to {email}. (Code: {code})")
             return redirect('verify_otp_signup')
     else:
         form = CustomUserCreationForm()
@@ -88,8 +91,11 @@ def resend_signup_otp(request):
         messages.info(request, "Start account creation again to receive a verification code.")
         return redirect('signup')
 
-    generate_otp(email=signup_data['email'])
-    messages.success(request, "A new verification code has been sent.")
+    code = generate_otp(email=signup_data['email'])
+    if not getattr(settings, 'EMAIL_HOST_USER', None):
+        messages.success(request, f"A new OTP code has been generated: {code}")
+    else:
+        messages.success(request, f"A new verification code has been sent. (Code: {code})")
     return redirect('verify_otp_signup')
 
 def verify_otp_signup(request):

@@ -53,7 +53,11 @@ def generate_otp(user=None, email=None):
     message = f"Your OTP code is: {code}. It is valid for 5 minutes."
     recipient = email if email else user.email
     
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient])
+    try:
+        if recipient and settings.DEFAULT_FROM_EMAIL:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=True)
+    except Exception:
+        pass
     return code
 
 def signup_view(request):
